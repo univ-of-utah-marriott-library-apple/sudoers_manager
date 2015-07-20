@@ -30,6 +30,8 @@
 ########
 # Update History
 #
+# 1.1.1     2015/07/20  The user specification is properly sorted so ALL rules
+#                       will be placed below any other rules.
 # 1.1.0     2015/07/20  Rebuilt get_rules_from_file() to prevent duplication of
 #                       comment lines.
 # 1.0.0     2015/07/16  Basic functionality in place.
@@ -51,9 +53,9 @@ import tempfile
 ## Attributes
 
 attributes = {
-	'long_name': 'Sudoers Manager',
-	'name': 	 os.path.basename(sys.argv[0]),
-	'version':   '1.0.0'
+    'long_name': 'Sudoers Manager',
+    'name':      os.path.basename(sys.argv[0]),
+    'version':   '1.0.0'
 }
 
 ########
@@ -215,8 +217,8 @@ def write_rules(rules, to_file):
     will keep all commented lines intact (this is non-destructive to the file).
 
     :param rules: A dictionary mapping section names to a list of rules for that
-    	section.
-	:param to_file: The absolute path to the desired sudoers file.
+        section.
+    :param to_file: The absolute path to the desired sudoers file.
     """
     # Set up a dict to describe which sections have been written out.
     section_written = {section: False for section in sections}
@@ -361,21 +363,21 @@ def timestamp(sudoers_file):
     # Open a temporary file where we'll write the changes.
     handle, temp_file = tempfile.mkstemp()
     with open(temp_file, 'w') as f:
-    	# Search the file for an existing timestamp line.
+        # Search the file for an existing timestamp line.
         stamped = False
         with open(sudoers_file) as old_file:
-        	# Iterate over the lines of the file.
+            # Iterate over the lines of the file.
             for line in old_file:
-            	# Is this line a timestamp?
+                # Is this line a timestamp?
                 if line.strip().startswith('#@timestamp'):
-	            	# If yes, print a new timestamp line instead.
+                    # If yes, print a new timestamp line instead.
                     f.write(stamp)
                     stamped = True
                 else:
-                	# Otherwise, just write the line out.
+                    # Otherwise, just write the line out.
                     f.write(line)
         if not stamped:
-        	# If there was no timestamp, add one to the end.
+            # If there was no timestamp, add one to the end.
             f.write(stamp)
     # Close the file and move it back into place.
     os.close(handle)
@@ -453,41 +455,41 @@ def backup(sudoers_file):
         shutil.copy2(sudoers_file, backup)
 
 def find_default_sudoers_file():
-	"""
-	Attempts to find a valid sudoers file being used by the system. This uses
-	the output of 'sudo -V', which lists the sudoers path.
+    """
+    Attempts to find a valid sudoers file being used by the system. This uses
+    the output of 'sudo -V', which lists the sudoers path.
 
-	If, for some reason, a valid sudoers path cannot be found, then this will
-	return the hardcoded default (/etc/sudoers). This method will not raise an
-	error.
+    If, for some reason, a valid sudoers path cannot be found, then this will
+    return the hardcoded default (/etc/sudoers). This method will not raise an
+    error.
 
-	:returns: The absolute path of the default sudoers file.
-	"""
-	# Set a hardcoded default value.
-	default = '/etc/sudoers'
-	print("Finding default sudoers file.")
-	# Get the output of 'sudo -V'. This should include a line like:
-	#   Sudoers path: /etc/sudoers
-	# We'll use this to pull the path of the sudoers file.
-	sudo_out = subprocess.check_output(['/usr/bin/sudo', '-V']).split('\n')
-	sudoers_path = None
-	for line in sudo_out:
-		# Iterate over the lines and look for "Sudoers path". If we find it,
-		# then we should use it.
-		if "Sudoers path" in line:
-			sudoers_path = line
-			break
-	if sudoers_path:
-		# We found it. Split it apart and take the path.
-		sudoers_file = os.path.abspath(sudoers_path.split(': ')[1])
-		if not os.path.isfile(sudoers_file):
-			# If that's not a file (for some reason), return the default.
-			return default
-	else:
-		# Couldn't find a sudoers path via 'sudo'. Use the default.
-		return default
-	# Return the found sudoers path.
-	return os.path.abspath(sudoers_file)
+    :returns: The absolute path of the default sudoers file.
+    """
+    # Set a hardcoded default value.
+    default = '/etc/sudoers'
+    print("Finding default sudoers file.")
+    # Get the output of 'sudo -V'. This should include a line like:
+    #   Sudoers path: /etc/sudoers
+    # We'll use this to pull the path of the sudoers file.
+    sudo_out = subprocess.check_output(['/usr/bin/sudo', '-V']).split('\n')
+    sudoers_path = None
+    for line in sudo_out:
+        # Iterate over the lines and look for "Sudoers path". If we find it,
+        # then we should use it.
+        if "Sudoers path" in line:
+            sudoers_path = line
+            break
+    if sudoers_path:
+        # We found it. Split it apart and take the path.
+        sudoers_file = os.path.abspath(sudoers_path.split(': ')[1])
+        if not os.path.isfile(sudoers_file):
+            # If that's not a file (for some reason), return the default.
+            return default
+    else:
+        # Couldn't find a sudoers path via 'sudo'. Use the default.
+        return default
+    # Return the found sudoers path.
+    return os.path.abspath(sudoers_file)
 
 def prompt_user(prompt):
     """
@@ -511,40 +513,40 @@ def prompt_user(prompt):
             print("Please respond with 'yes' or 'no'.")
 
 def show_help():
-	"""
-	Prints the version and usage information.
-	"""
-	show_version()
-	print('''\
+    """
+    Prints the version and usage information.
+    """
+    show_version()
+    print('''\
 usage: {name} [-hvcrb] [-f file] [-d rule[,-d rule,...]] rule[,rule,...]
 
 Modify the sudoers file safely and atomically, keeping all of the rules
 organized into the appropriate sections.
 
-	-h, --help
-		Prints this help message and quits.
-	-v, --version
-		Prints the version information and quits.
-	-r, --replace-rules
-		Discards previously-existing rules, if there are any. Keeps the existing
-		comments by default, but this can be overridden with --build-templated.
-	-b, --build-templated
-		Discards the previously-existing sudoers file. Keeps the existing rules
-		by default, but this can be overridden with --replace-rules.
-	-c, --create
-		Prevents the script from prompting for permission to create a new file
-		if one does not exist in the expected location.
+    -h, --help
+        Prints this help message and quits.
+    -v, --version
+        Prints the version information and quits.
+    -r, --replace-rules
+        Discards previously-existing rules, if there are any. Keeps the existing
+        comments by default, but this can be overridden with --build-templated.
+    -b, --build-templated
+        Discards the previously-existing sudoers file. Keeps the existing rules
+        by default, but this can be overridden with --replace-rules.
+    -c, --create
+        Prevents the script from prompting for permission to create a new file
+        if one does not exist in the expected location.
 
-	-f file, --file file
-		Uses 'file' as the sudoers file instead of the system default.
-	-d rule, --delete rule
-		Removes rules from the list (if they exist). This will not cause an
-		error if the specified rule is not in the list of rules.
+    -f file, --file file
+        Uses 'file' as the sudoers file instead of the system default.
+    -d rule, --delete rule
+        Removes rules from the list (if they exist). This will not cause an
+        error if the specified rule is not in the list of rules.
 
-	rule(s)
-		Sudoers rule(s) to be added to the file.
-		These should be QUOTED. Seriously. It'll break if you don't quote your
-		rules.
+    rule(s)
+        Sudoers rule(s) to be added to the file.
+        These should be QUOTED. Seriously. It'll break if you don't quote your
+        rules.
 '''.format(name = attributes['name']))
 
 def show_version():
@@ -588,7 +590,7 @@ if __name__ == '__main__':
     # Should we use the default location?
     if args.file:
         # No, so set our location to the user-specified.
-        sudoers_file = args.file
+        sudoers_file = os.path.abspath(args.file)
     else:
         # Otherwise, find the default sudoers file location.
         sudoers_file = find_default_sudoers_file()
@@ -614,19 +616,9 @@ if __name__ == '__main__':
         else:
             print("No file exists and one is not going to be created at: {}".format(sudoers_file))
             sys.exit(4)
-    # Should we create a new file from the template?
-    print("create_from_template: {}".format(create_from_template))
-    if create_from_template:
-        # Build the new file.
-        handle, temp_file = tempfile.mkstemp()
-        build_clean_from_template(temp_file)
-    else:
-        # Copy the original to a temp file.
-        handle, temp_file = tempfile.mkstemp()
-        shutil.copy(sudoers_file, temp_file)
     # Add the user-specified rules to the rules dict.
     for rule in args.rules:
-    	rule = rule.strip()
+        rule = rule.strip()
         added = False
         # Try to match the rule to a specific section.
         for section in sections:
@@ -639,36 +631,46 @@ if __name__ == '__main__':
             rules['User_Rule'].append(rule)
     # Remove duplicate rules by throwing the list into an OrderedDict.
     for section, rules_list in rules.iteritems():
-    	rules_list = list(collections.OrderedDict.fromkeys(rules_list))
-    	rules[section] = rules_list
+        rules_list = list(collections.OrderedDict.fromkeys(rules_list))
+        rules[section] = rules_list
     # Remove rules specified for deletion.
     for rule in args.delete:
-    	for section, rules_list in rules.iteritems():
-    		if rule in rules_list:
-    			rules_list = [x for x in rules_list if x != rule]
-    			rules[section] = rules_list
-	# Organize the user specification rules so that any ALL rules will be pushed
-	# to the end of the list.
-	user_spec_rules = []
-	all_rules_count = 0
-	print("adding user rules")
-	# for rule in rules['User_Rule']:
-	# 	print(rule)
-	# 	# Is the rule an 'ALL' rule?
-	# 	if rule.strip().startswith('ALL'):
-	# 		# Yes, so push the file to the end of the list.
-	# 		user_spec_rules.append(rule)
-	# 		all_rules_count += 1
-	# 	else:
-	# 		# No, so insert the file after the previous non-ALL rules but ahead
-	# 		# of the ALL rules in the list.
-	# 		user_spec_rules.insert(len(user_spec_rules) - all_rules_count, rule)
-	# 	print("user_spec_rules = {}".format(user_spec_rules))
-	# rules['User_Rule'] = user_spec_rules
-	# Sometimes empty strings sneak in there. Let's get rid of those.
-	for section, rules_list in rules.iteritems():
-		rules_list = [x for x in rules_list if x]
-		rules[section] = rules_list
+        for section, rules_list in rules.iteritems():
+            if rule in rules_list:
+                rules_list = [x for x in rules_list if x != rule]
+                rules[section] = rules_list
+    # Organize the user specification rules so that any ALL rules will be pushed
+    # to the end of the list.
+    user_spec_rules = []
+    all_rules_count = 0
+    print("adding user rules")
+    for rule in rules['User_Rule']:
+        print(rule)
+        # Is the rule an 'ALL' rule?
+        if rule.strip().startswith('ALL'):
+            # Yes, so push the file to the end of the list.
+            user_spec_rules.append(rule)
+            all_rules_count += 1
+        else:
+            # No, so insert the file after the previous non-ALL rules but ahead
+            # of the ALL rules in the list.
+            user_spec_rules.insert(len(user_spec_rules) - all_rules_count, rule)
+        print("user_spec_rules = {}".format(user_spec_rules))
+    rules['User_Rule'] = user_spec_rules
+    # Sometimes empty strings sneak in there. Let's get rid of those.
+    for section, rules_list in rules.iteritems():
+        rules_list = [x for x in rules_list if x]
+        rules[section] = rules_list
+    # Should we create a new file from the template?
+    print("create_from_template: {}".format(create_from_template))
+    if create_from_template:
+        # Build the new file.
+        handle, temp_file = tempfile.mkstemp()
+        build_clean_from_template(temp_file)
+    else:
+        # Copy the original to a temp file.
+        handle, temp_file = tempfile.mkstemp()
+        shutil.copy(sudoers_file, temp_file)
     # Write the changes to the temp file.
     # print(rules)
     write_rules(rules, temp_file)
