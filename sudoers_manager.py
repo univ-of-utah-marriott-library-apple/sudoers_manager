@@ -30,6 +30,8 @@
 ########
 # Update History
 #
+# 1.1.2     2015/07/21  File permissions are properly set to 0440 and owned by
+#                       user 0 and group 0.
 # 1.1.1     2015/07/20  The user specification is properly sorted so ALL rules
 #                       will be placed below any other rules.
 # 1.1.0     2015/07/20  Rebuilt get_rules_from_file() to prevent duplication of
@@ -55,7 +57,7 @@ import tempfile
 attributes = {
     'long_name': 'Sudoers Manager',
     'name':      os.path.basename(sys.argv[0]),
-    'version':   '1.0.0'
+    'version':   '1.1.2'
 }
 
 ########
@@ -272,6 +274,9 @@ def commit(from_file, to_file):
         print("Backing up original...")
         backup(to_file)
     print("Moving new file into place...")
+    # Set the appropriate sudoers file permissions and owners.
+    os.chmod(from_file, 0440)
+    os.chown(from_file, 0, 0)
     shutil.move(from_file, to_file)
     timestamp(to_file)
 
@@ -381,6 +386,9 @@ def timestamp(sudoers_file):
             f.write(stamp)
     # Close the file and move it back into place.
     os.close(handle)
+    # Set the appropriate sudoers file permissions and owners.
+    os.chmod(temp_file, 0440)
+    os.chown(temp_file, 0, 0)
     shutil.move(temp_file, sudoers_file)
 
 def get_rules_from_file(sudoers_file):
