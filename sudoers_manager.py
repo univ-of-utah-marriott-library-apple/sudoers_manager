@@ -30,6 +30,8 @@
 ########
 # Update History
 #
+# 1.2.0     2015/07/21  Added a sort of 'verbose' mode that prints some extra
+#                       info as it is read. Not super helpful in most cases.
 # 1.1.2     2015/07/21  File permissions are properly set to 0440 and owned by
 #                       user 0 and group 0.
 # 1.1.1     2015/07/20  The user specification is properly sorted so ALL rules
@@ -57,7 +59,7 @@ import tempfile
 attributes = {
     'long_name': 'Sudoers Manager',
     'name':      os.path.basename(sys.argv[0]),
-    'version':   '1.1.2'
+    'version':   '1.2.0'
 }
 
 ########
@@ -391,7 +393,7 @@ def timestamp(sudoers_file):
     os.chown(temp_file, 0, 0)
     shutil.move(temp_file, sudoers_file)
 
-def get_rules_from_file(sudoers_file):
+def get_rules_from_file(sudoers_file, verbose=False):
     """
     Pulls rules out of a sudoers file and sorts them into their appropriate
     sections. This method assumes that the file is a valid sudoers file as
@@ -413,7 +415,8 @@ def get_rules_from_file(sudoers_file):
         line = lines[index]
         # Search for the section we need.
         while (not line.startswith('#@start {}'.format(section))):
-            print("line: {}".format(line))
+            if verbose:
+                print("line: {}".format(line))
             index += 1
             line = lines[index]
         # (Need to iterate over the '#@start' line.)
@@ -424,15 +427,16 @@ def get_rules_from_file(sudoers_file):
             # Is the line a comment?
             if line and not line.strip().startswith('#'):
                 # No, so add it to the rules.
-                print("rule: {}".format(line))
+                if verbose:
+                    print("rule: {}".format(line))
                 rules[section].append(line)
-            else:
+            elif verbose:
                 # It's a comment. Ignore it!
                 print("cmnt: {}".format(line))
-                pass
             index += 1
             line = lines[index]
-    print("rules: {}".format(rules))
+    if verbose:
+        print("rules: {}".format(rules))
     return rules
 
 def backup(sudoers_file):
@@ -535,6 +539,9 @@ organized into the appropriate sections.
         Prints this help message and quits.
     -v, --version
         Prints the version information and quits.
+    -V, --verbose
+        Prints out how the script sees the existing sudoers file as it is read.
+        More for minor debugging. Not terribly helpful.
     -r, --replace-rules
         Discards previously-existing rules, if there are any. Keeps the existing
         comments by default, but this can be overridden with --build-templated.
@@ -577,6 +584,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--help', '-h', action='store_true')
     parser.add_argument('--version', '-v', action='store_true')
+    parser.add_argument('--verbose', '-V', action='store_true')
     parser.add_argument('--replace-rules', '-r', action='store_true')
     parser.add_argument('--build-templated', '-b', action='store_true') # implies --replace
     parser.add_argument('--create', '-c', action='store_true') # prevents prompts
@@ -611,7 +619,7 @@ if __name__ == '__main__':
             # Yes, it conforms. Should we replace the existing rules?
             if not args.replace_rules:
                 # No, don't replace them. Let's pull the existing rules from it.
-                rules = get_rules_from_file(sudoers_file)
+                rules = get_rules_from_file(sudoers_file, args.verbose)
         else:
             # The file is not valid, which is an error.
             print("No conforming sudoers file exists at: {}".format(sudoers_file))
@@ -651,9 +659,7 @@ if __name__ == '__main__':
     # to the end of the list.
     user_spec_rules = []
     all_rules_count = 0
-    print("adding user rules")
     for rule in rules['User_Rule']:
-        print(rule)
         # Is the rule an 'ALL' rule?
         if rule.strip().startswith('ALL'):
             # Yes, so push the file to the end of the list.
@@ -663,14 +669,12 @@ if __name__ == '__main__':
             # No, so insert the file after the previous non-ALL rules but ahead
             # of the ALL rules in the list.
             user_spec_rules.insert(len(user_spec_rules) - all_rules_count, rule)
-        print("user_spec_rules = {}".format(user_spec_rules))
     rules['User_Rule'] = user_spec_rules
     # Sometimes empty strings sneak in there. Let's get rid of those.
     for section, rules_list in rules.iteritems():
         rules_list = [x for x in rules_list if x]
         rules[section] = rules_list
     # Should we create a new file from the template?
-    print("create_from_template: {}".format(create_from_template))
     if create_from_template:
         # Build the new file.
         handle, temp_file = tempfile.mkstemp()
@@ -680,7 +684,6 @@ if __name__ == '__main__':
         handle, temp_file = tempfile.mkstemp()
         shutil.copy(sudoers_file, temp_file)
     # Write the changes to the temp file.
-    # print(rules)
     write_rules(rules, temp_file)
     os.close(handle)
     # Commit the changes from the temp file to the sudoers file.
