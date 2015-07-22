@@ -30,6 +30,8 @@
 ########
 # Update History
 #
+# 1.3.1     2015/07/22  Fixed backup system so backup files will have the same
+#                       basename as the original file.
 # 1.3.0     2015/07/22  Added ability to migrate from non-compliant sudoers.
 # 1.2.0     2015/07/21  Added a sort of 'verbose' mode that prints some extra
 #                       info as it is read. Not super helpful in most cases.
@@ -60,7 +62,7 @@ import tempfile
 attributes = {
     'long_name': 'Sudoers Manager',
     'name':      os.path.basename(sys.argv[0]),
-    'version':   '1.3.0'
+    'version':   '1.3.1'
 }
 
 ########
@@ -494,8 +496,9 @@ def backup(sudoers_file):
         raise ValueError("The given sudoers file does not exist: {}".format(sudoers_file))
     # Declare names for the necessary files.
     parent_dir = os.path.dirname(sudoers_file)
-    original   = os.path.join(parent_dir, 'sudoers.original')
-    backup     = os.path.join(parent_dir, 'sudoers.backup')
+    basename   = os.path.basename(sudoers_file)
+    original   = os.path.join(parent_dir, '{}.original'.format(basename))
+    backup     = os.path.join(parent_dir, '{}.backup'.format(basename))
     # Make the backup copy.
     if not os.path.isfile(original):
         # If the original backup doesn't exist, make it.
