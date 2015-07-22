@@ -30,6 +30,7 @@
 ########
 # Update History
 #
+# 1.3.0     2015/07/22  Added ability to migrate from non-compliant sudoers.
 # 1.2.0     2015/07/21  Added a sort of 'verbose' mode that prints some extra
 #                       info as it is read. Not super helpful in most cases.
 # 1.1.2     2015/07/21  File permissions are properly set to 0440 and owned by
@@ -59,7 +60,7 @@ import tempfile
 attributes = {
     'long_name': 'Sudoers Manager',
     'name':      os.path.basename(sys.argv[0]),
-    'version':   '1.2.0'
+    'version':   '1.3.0'
 }
 
 ########
@@ -264,8 +265,12 @@ def commit(from_file, to_file):
     :param to_file: The actual existing sudoers file.
     """
     # Check that the proposed sudoers file is good to move.
-    validate(from_file)
-    verify(from_file)
+    if not validate(from_file):
+        print("The proposed sudoers file is not valid: {}".format(from_file))
+        sys.exit(4)
+    if not verify(from_file):
+        print("The proposed sudoers file could not be verified: {}".format(from_file))
+        sys.exit(4)
     # The source file is fine.
     print("Successful parse.")
     # Now we'll make a copy of the original (leaving the original in place
@@ -357,7 +362,8 @@ def verify(sudoers_file):
         # Something went wrong. Exit with an error and leave the proposed file
         # in place so the user can investigate what went wrong.
         print("Invalid syntax. Try 'visudo -cf {}'".format(sudoers_file))
-        sys.exit(4)
+        return False
+    return True
 
 def timestamp(sudoers_file):
     """
@@ -437,6 +443,38 @@ def get_rules_from_file(sudoers_file, verbose=False):
             line = lines[index]
     if verbose:
         print("rules: {}".format(rules))
+    return rules
+
+def get_rules_from_nonconforming_file(sudoers_file):
+    """
+    Pulls out non-commented content-containing lines from a given file. It is
+    assumed that this file is a valid sudoers file according to the system
+    (i.e. it passes `visudo -c`).
+    
+    :param sudoers_file: The absolute path to a supposed sudoers file.
+    :returns: A dictionary mapping section names to lists of rules that belong
+        in that section.
+    """
+    rules = {section: [] for section in sections}
+    # Read in the existing file to a list.
+    lines = []
+    with open(sudoers_file) as f:
+        lines = f.read().splitlines()
+    # Iterate over the list and pull out the lines that are useful.
+    raw_rules = []
+    for line in lines:
+        # Make sure the line isn't whitespace and isn't a comment.
+        if line and not line.strip().startswith('#'):
+            raw_rules.append(line)
+    # Take all of the rules we've found and sort them into their sections.
+    for rule in raw_rules:
+        # The section is determined by the first word of the line.
+        section = rule.split()[0]
+        if section in rules:
+            rules[section].append(rule)
+        else:
+            rules['User_Rule'].append(rule)
+    # Give back the results!
     return rules
 
 def backup(sudoers_file):
@@ -551,6 +589,10 @@ organized into the appropriate sections.
     -c, --create
         Prevents the script from prompting for permission to create a new file
         if one does not exist in the expected location.
+    -m, --migrate
+        Prevents the script from prompting for permission to migrate from an
+        existing sudoers file that is not properly marked for use with Sudoers
+        Manager.
 
     -f file, --file file
         Uses 'file' as the sudoers file instead of the system default.
@@ -586,8 +628,9 @@ if __name__ == '__main__':
     parser.add_argument('--version', '-v', action='store_true')
     parser.add_argument('--verbose', '-V', action='store_true')
     parser.add_argument('--replace-rules', '-r', action='store_true')
-    parser.add_argument('--build-templated', '-b', action='store_true') # implies --replace
+    parser.add_argument('--build-templated', '-b', action='store_true')
     parser.add_argument('--create', '-c', action='store_true') # prevents prompts
+    parser.add_argument('--migrate', '-m', action='store_true') # prevents prompts too
     parser.add_argument('--file', '-f')
     parser.add_argument('--delete', '-d', action='append', default=[]) # rules to be removed
     parser.add_argument('rules', nargs='*')
@@ -621,15 +664,29 @@ if __name__ == '__main__':
                 # No, don't replace them. Let's pull the existing rules from it.
                 rules = get_rules_from_file(sudoers_file, args.verbose)
         else:
-            # The file is not valid, which is an error.
-            print("No conforming sudoers file exists at: {}".format(sudoers_file))
-            sys.exit(3)
+            # The file is not a conforming sudoers file for Sudoers Manager.
+            # Is the file even a system-recognized sudoers file?
+            if verify(sudoers_file):
+                # Yes it is. Let's see if we should try to migrate.
+                if args.migrate or prompt_user("The sudoers file doesn't conform. Would you like to migrate your existing rules to a new file?"):
+                    # Pull out the rules that are already in the file.
+                    rules = get_rules_from_nonconforming_file(sudoers_file)
+                    create_from_template = True
+                else:
+                    # The user didn't want to migrate, so let's quit.
+                    print("The file that exists does not conform to Sudoers Manager specifications: {}".format(sudoers_file))
+                    sys.exit(4)
+            else:
+                # The file is not valid, which is an error.
+                print("No valid sudoers file exists at: {}".format(sudoers_file))
+                sys.exit(3)
     else:
         # The file does not exist. Should we create a new file from template?
         if args.create or prompt_user("No sudoers file exists. Would you like to create one from the template?"):
             # Create the file from scratch.
             create_from_template = True
         else:
+            # The user didn't want to create the file from scratch, so quit.
             print("No file exists and one is not going to be created at: {}".format(sudoers_file))
             sys.exit(4)
     # Add the user-specified rules to the rules dict.
