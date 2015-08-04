@@ -14,6 +14,7 @@ A standalone Python script to help administrators manage their sudoers file.
   * [Rules](#rules)
 * [File Formatting](#file-formatting) - rules for how to write the sudoers file
 * [Safeguards](#safeguards) - nobody wants to ruin their sudoers file
+* [Update History](#update-history) - list of changes to this script over time.
 
 ## Contact
 
@@ -112,3 +113,18 @@ I have tried to ensure that there are no race conditions in the code. All writin
 ## Automation
 
 The Sudoers Manager script, while usable from the command line by any user with proper administrative privileges, was designed to be able to be run in a fully automated capacity to help systems administrators to push out changes to their vast fleets of computers without having to rewrite the `sudoers` file directly. When used with the appropriate flags, Sudoers Manager will not prompt for any input and will only exit unsuccessfully if the rules given to it are bad and cannot pass a `visudo` check.
+
+## Update History
+
+This is a reverse-chronological list of updates to this project. The version numbers for this project were not very good at the beginning.
+
+| Date       | Version | Update                                                                                     |
+|------------|:-------:|--------------------------------------------------------------------------------------------|
+| 2015-08-04 | 1.3.2   | Fixed rule retrieval so 'Defaults:' rules will be properly sorted.                         |
+| 2015-07-22 | 1.3.1   | Fixed backup system to backup files will have same basename as original.                   |
+| 2015-07-22 | 1.3.0   | Added ability to migrate from non-compliant sudoers files.                                 |
+| 2015-07-21 | 1.2.0   | Added some extra info-dumping via `--verbose`. Not terribly helpful to most people.        |
+| 2015-07-21 | 1.1.2   | Fixed an issue where file permissions were not being updated. Could've caused problems.    |
+| 2015-07-20 | 1.1.1   | Added sorting so 'ALL' rules will be placed below other user specification rules.          |
+| 2015-07-20 | 1.1.0   | Updated the method used for grabbing rules out of existing sudoers files.                  |
+| 2015-07-16 | 1.0.0   | Basic functionality established, though with many rough edges.                             |
