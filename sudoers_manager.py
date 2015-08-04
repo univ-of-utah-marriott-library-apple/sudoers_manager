@@ -30,6 +30,9 @@
 ########
 # Update History
 #
+# 1.3.2     2015/08/04  Fixed rule retrieval to properly sort all rules. Also
+#                       adjusted filtering so 'Defaults:' will move be pushed to
+#                       the bottom of the Defaults section.
 # 1.3.1     2015/07/22  Fixed backup system so backup files will have the same
 #                       basename as the original file.
 # 1.3.0     2015/07/22  Added ability to migrate from non-compliant sudoers.
@@ -62,7 +65,7 @@ import tempfile
 attributes = {
     'long_name': 'Sudoers Manager',
     'name':      os.path.basename(sys.argv[0]),
-    'version':   '1.3.1'
+    'version':   '1.3.2'
 }
 
 ########
@@ -470,11 +473,17 @@ def get_rules_from_nonconforming_file(sudoers_file):
             raw_rules.append(line)
     # Take all of the rules we've found and sort them into their sections.
     for rule in raw_rules:
-        # The section is determined by the first word of the line.
-        section = rule.split()[0]
-        if section in rules:
-            rules[section].append(rule)
-        else:
+        # Check each possible section and see if the line starts with it.
+        added = False
+        for section in sections:
+            # Does the line start with the current section?
+            if rule.strip().startswith(section):
+                # Add it in and mark the rule as 'added'.
+                rules[section].append(rule)
+                added = True
+                break
+        if not added:
+            # The rule wasn't added. Put it in the user rules!
             rules['User_Rule'].append(rule)
     # Give back the results!
     return rules
@@ -715,6 +724,21 @@ if __name__ == '__main__':
             if rule in rules_list:
                 rules_list = [x for x in rules_list if x != rule]
                 rules[section] = rules_list
+    # Organize the defaults specification rules so that any rules beginning with
+    # 'Defaults:' will be pushed to the end of the list.
+    defaults_spec_rules  = []
+    defaults_rules_count = 0
+    for rule in rules['Defaults']:
+        # Is the rule a 'Defaults:' rule?
+        if rule.strip().startswith('Defaults:'):
+            # Yes, so push the rule to the end of the list.
+            defaults_spec_rules.append(rule)
+            defaults_rules_count += 1
+        else:
+            # No, so insert the rule after the previous non-'Defaults:' rules
+            # but ahead of the 'Defaults:' rules in the list.
+            defaults_spec_rules.insert(len(defaults_spec_rules) - defaults_rules_count, rule)
+    rules['Defaults'] = defaults_spec_rules
     # Organize the user specification rules so that any ALL rules will be pushed
     # to the end of the list.
     user_spec_rules = []
@@ -722,11 +746,11 @@ if __name__ == '__main__':
     for rule in rules['User_Rule']:
         # Is the rule an 'ALL' rule?
         if rule.strip().startswith('ALL'):
-            # Yes, so push the file to the end of the list.
+            # Yes, so push the rule to the end of the list.
             user_spec_rules.append(rule)
             all_rules_count += 1
         else:
-            # No, so insert the file after the previous non-ALL rules but ahead
+            # No, so insert the rule after the previous non-ALL rules but ahead
             # of the ALL rules in the list.
             user_spec_rules.insert(len(user_spec_rules) - all_rules_count, rule)
     rules['User_Rule'] = user_spec_rules
