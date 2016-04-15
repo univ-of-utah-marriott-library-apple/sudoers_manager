@@ -120,6 +120,7 @@ This is a reverse-chronological list of updates to this project. The version num
 
 | Date       | Version | Update                                                                                     |
 |------------|:-------:|--------------------------------------------------------------------------------------------|
+| 2016-04-15 | 1.4.0   | Added option to simply discard existing sudoers file.                                      |
 | 2015-08-04 | 1.3.2   | Fixed rule retrieval so 'Defaults:' rules will be properly sorted.                         |
 | 2015-07-22 | 1.3.1   | Fixed backup system to backup files will have same basename as original.                   |
 | 2015-07-22 | 1.3.0   | Added ability to migrate from non-compliant sudoers files.                                 |
